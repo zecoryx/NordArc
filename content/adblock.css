@@ -1,0 +1,25 @@
+/* ArcZen Ad Block Styles */
+
+/* Hiding common ad elements */
+.ad-banner,
+.advertisement,
+.sponsored-content,
+[id*="google_ads"],
+[class*="google_ads"],
+iframe[src*="doubleclick.net"],
+iframe[src*="googlesyndication.com"],
+div[data-ad-unit],
+div[aria-label="Ads"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    pointer-events: none !important;
+}
+
+/* YouTube Ad Overlays (Basic cosmetic) */
+.video-ads,
+.ytp-ad-overlay-container,
+.ytd-display-ad-renderer {
+    display: none !important;
+}

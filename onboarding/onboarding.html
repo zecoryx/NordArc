@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup ArcZen</title>
+    <link rel="stylesheet" href="onboarding.css">
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- STEP 1 -->
+        <div id="step1" class="step active">
+            <h1>Welcome to Focus</h1>
+            <p>Set a commitment passcode to prevent yourself from easily disabling blocks.</p>
+
+            <input type="password" id="passInput" placeholder="Create Passcode">
+            <input type="password" id="passConfirm" placeholder="Confirm Passcode">
+
+            <button id="nextBtn">Continue</button>
+            <p id="errorMsg" style="color:#ef4444; font-size:12px; margin-top:10px; display:none"></p>
+        </div>
+
+        <!-- STEP 2 -->
+        <div id="step2" class="step">
+            <h1>Select Distractions</h1>
+            <p>Choose sites you want to block immediately.</p>
+
+            <div class="sites-grid" id="sitesGrid">
+                <!-- JS will fill this -->
+            </div>
+
+            <button id="finishBtn">Start Focus</button>
+        </div>
+
+    </div>
+    <script src="onboarding.js"></script>
+</body>
+
+</html>

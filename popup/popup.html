@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArcZen</title>
+  <link rel="stylesheet" href="popup.css">
+  <!-- Lucide Icons via standard SVGs (Inline for performance/security) -->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">ArcZen</div>
+      <div class="status-badge">
+        POWERED BY ZECORYX
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- HOME TAB -->
+      <section id="home" class="tab-content active">
+        <div class="card hero-stat">
+          <span class="label">Time Saved</span>
+          <span class="value" id="streakCount">0</span>
+          <span class="unit">days clean streak</span>
+        </div>
+
+        <div class="grid-stats">
+          <div class="mini-stat">
+            <span class="value" id="todayBlocks">0</span>
+            <span class="label">Blocks Today</span>
+          </div>
+          <div class="mini-stat">
+            <span class="value" id="totalBlocks">0</span>
+            <span class="label">Total Blocks</span>
+          </div>
+        </div>
+
+        <div class="maintenance-alert" id="maintenanceNotice" style="display: none;"></div>
+      </section>
+
+      <!-- RULES TAB -->
+      <section id="rules" class="tab-content">
+        <form id="addSiteForm">
+          <div class="input-wrapper">
+            <!-- Plus Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <input type="text" id="siteInput" placeholder="Add site (e.g., twitter.com)..." autocomplete="off">
+            <button type="submit" class="add-btn">Add</button>
+          </div>
+        </form>
+
+        <div class="section-title">ACTIVE BLOCKS</div>
+        <div class="blocked-list" id="blockedList">
+          <!-- Items -->
+        </div>
+        <p class="empty-state" id="emptyMessage">No blocked sites yet.</p>
+
+        <div class="pending-section" id="pendingSection" style="display: none;">
+          <ul id="pendingList"></ul>
+        </div>
+      </section>
+
+      <!-- SHIELD TAB (AdBlock) -->
+      <section id="shield" class="tab-content">
+        <div class="card center-card">
+          <div class="shield-status">
+            <span class="status-text" id="shieldStatusText">PROTECTION OFF</span>
+          </div>
+
+          <button class="big-toggle-btn" id="shieldToggle">
+            <!-- Power Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+              <line x1="12" y1="2" x2="12" y2="12" />
+            </svg>
+          </button>
+
+          <div class="limit-tracker">
+            <span class="limit-label">ADS BLOCKED (FREE PLAN)</span>
+            <div class="progress-bar">
+              <div class="progress-fill" id="adLimitBar" style="width: 0%"></div>
+            </div>
+            <span class="limit-count" id="adLimitCount">0 / 200</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- VPN TAB -->
+      <section id="vpn" class="tab-content">
+        <div class="vpn-header">
+          <div class="country-selector" id="countrySelector">
+            <span class="flag">🇺🇸</span>
+            <span class="country-name">United States</span>
+            <span class="arrow">▼</span>
+          </div>
+        </div>
+
+        <div class="vpn-center">
+          <button class="vpn-connect-btn" id="vpnConnectBtn">
+            <div class="vpn-outer-ring"></div>
+            <div class="vpn-inner">
+              <!-- Globe Icon -->
+              <svg class="vpn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              <span class="vpn-text">CONNECT</span>
+            </div>
+          </button>
+          <div class="vpn-status" id="vpnStatus">DISCONNECTED</div>
+          <div id="vpnMessage"
+            style="font-size: 12px; color: #9ca3af; margin-top: 16px; text-align: center; padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            Coming Soon</div>
+        </div>
+      </section>
+
+      <!-- SETTINGS TAB -->
+      <section id="settings" class="tab-content">
+        <div class="section-title">PREFERENCES</div>
+        <div class="setting-item">
+          <span class="setting-label">Commitment Status</span>
+          <span class="setting-value" id="nextMaintenance">--</span>
+        </div>
+
+        <div class="card" style="margin-bottom: 12px; border-left: 3px solid #10b981;">
+          <div class="section-title" style="margin-bottom: 8px; color: #10b981;">MAINTENANCE POLICY</div>
+          <div style="font-size: 11px; color: #9ca3af; line-height: 1.4;">
+            On the <b>last day of every month</b>, from <b>23:50 to 00:00</b> (10 mins), restrictions are lifted. You
+            can remove sites instantly or browse freely.
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <span class="setting-label">Next Maintenance</span>
+          <span class="setting-value" id="nextMaintenanceDate">--</span>
+        </div>
+
+        <div class="setting-item">
+          <span class="setting-label">Current Status</span>
+          <span class="setting-value" id="maintenanceStatus">--</span>
+        </div>
+
+        <div class="card">
+          <div class="section-title" style="margin-bottom:20px; text-align: left;">ACTIVITY</div>
+          <div class="bar-chart" id="hourlyChart" style="display:flex; align-items:flex-end; height: 100px; gap:4px">
+          </div>
+        </div>
+
+        <!-- Pro Code Activation -->
+        <div class="card" style="margin-top: 12px;">
+          <div class="section-title" style="margin-bottom: 12px;">ENTER PRO CODE</div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="proCodeInput" placeholder="ARCZEN-PRO-XXXX"
+              style="flex: 1; background: #222; border: 1px solid #333; padding: 10px 12px; border-radius: 8px; color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+            <button id="activateProBtn" class="add-btn" style="padding: 10px 16px;">Activate</button>
+          </div>
+          <div id="proStatus" style="font-size: 11px; color: #9ca3af; margin-top: 8px; text-align: center;"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Navigation Tabs (Bottom) -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="home">
+        <!-- Home Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="tab-btn" data-tab="rules">
+        <!-- List/Rules Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+        <span>Rules</span>
+      </button>
+      <button class="tab-btn" data-tab="shield">
+        <!-- Shield Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+        <span>Shield</span>
+      </button>
+      <button class="tab-btn" data-tab="vpn">
+        <!-- Globe Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+        <span>VPN</span>
+      </button>
+      <button class="tab-btn" data-tab="settings">
+        <!-- Settings Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Password Modal -->
+  <div class="modal-overlay" id="passwordModal">
+    <div class="modal-content">
+      <div class="modal-title">Verification</div>
+      <p class="modal-desc">Enter your commitment passcode</p>
+      <input type="password" id="passwordInput" class="pass-input" placeholder="••••" maxlength="20">
+      <div class="modal-btns">
+        <button class="modal-btn btn-cancel" id="cancelBtn">Cancel</button>
+        <button class="modal-btn btn-confirm" id="confirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

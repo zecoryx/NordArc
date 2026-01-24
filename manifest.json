@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "ArcZen",
+  "version": "1.0.0",
+  "description": "Focus & Productivity - Block distracting sites with Commitment Lock",
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  },
+  "permissions": [
+    "storage",
+    "webNavigation",
+    "alarms",
+    "proxy"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "logo.png",
+      "48": "logo.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/adblock.js"
+      ],
+      "css": [
+        "content/adblock.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lockscreen/lockscreen.html",
+        "lockscreen/lockscreen.css",
+        "lockscreen/lockscreen.js",
+        "onboarding/onboarding.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

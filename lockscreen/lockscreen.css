@@ -1,0 +1,166 @@
+/* ArcZen Opal Lock Screen */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+:root {
+    --bg-deep: #050510;
+    --text-main: #ffffff;
+    --text-dim: #9ca3af;
+    --accent-grad: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--bg-deep);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.glow-bg {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+}
+
+.status-capsule {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+}
+
+h1 {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    background: linear-gradient(180deg, #fff, #bbb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-top: 10px;
+}
+
+/* Breathing Ring (Opal Gem Style) */
+.gem-container {
+    width: 220px;
+    height: 220px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gem-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #7c3aed, #2563eb, #06b6d4, #7c3aed);
+    opacity: 0.5;
+    filter: blur(20px);
+    transition: transform 4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gem-core {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    box-shadow: inset 0 0 40px rgba(124, 58, 237, 0.2);
+}
+
+.gem-label {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+/* Animations */
+.gem-container.inhale .gem-ring {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.8;
+}
+
+.gem-container.exhale .gem-ring {
+    transform: scale(1) rotate(360deg);
+    opacity: 0.4;
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 280px;
+}
+
+.btn {
+    background: white;
+    color: black;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.btn:hover {
+    transform: scale(1.02);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    backdrop-filter: blur(10px);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.quote {
+    max-width: 400px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
