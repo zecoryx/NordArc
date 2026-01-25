@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor directories
+.vscode/
+.idea/
+
+# Extension builds
+*.zip
+*.crx
+*.pem
+
+# Logs
+*.log
+npm-debug.log*

@@ -5,36 +5,9 @@ const FREE_SITE_LIMIT = 7;
 const VPN_TRIAL_MINUTES = 10;
 const PRO_CODES = ['ARCZEN-PRO-2026', 'ARCZEN-BETA-VIP', 'ZECORYX-UNLOCK']; // Valid codes
 
-// --- VPN CONFIGURATION ---
-// NOTE: If VPN doesn't work, try changing scheme to: "https", "socks4", or "socks5"
-const PROXY_SERVER = {
-    host: "186.179.62.119",
-    port: 9832,
-    user: "3DrsNZ",
-    pass: "TsNG7V",
-    scheme: "http" // Try http first, if not working try https or socks5
-};
+// VPN CONFIGURATION: REMOVED (Feature is visual-only "Coming Soon")
+// PROXY_SERVER and VPN_CONFIG were deleted as they are not used.
 
-const VPN_CONFIG = {
-    mode: "fixed_servers",
-    rules: {
-        singleProxy: {
-            scheme: PROXY_SERVER.scheme,
-            host: PROXY_SERVER.host,
-            port: PROXY_SERVER.port
-        },
-        bypassList: ["localhost", "127.0.0.1"]
-    }
-};
-
-/*
- * NOTE: Manifest V3 does not support blocking webRequest listeners.
- * If your proxy requires authentication, the browser will prompt the user.
- * For automatic auth, you would need an enterprise extension or MV2.
- * 
- * WORKAROUND: Use a proxy that doesn't require auth, or pre-configure
- * credentials in your system's proxy settings.
- */
 // ---------------------------------------------
 
 const BLOCKED_KEYWORDS = [
@@ -190,32 +163,8 @@ function isMaintenanceWindow() {
     return false;
 }
 
-// Process pending removals
-async function processPendingRemovals() {
-    const { pendingRemovals = [], blockedSites = [] } = await chrome.storage.local.get(['pendingRemovals', 'blockedSites']);
-    const now = Date.now();
+// Pending removals logic removed (Strict Mode only)
 
-    const stillPending = [];
-    let changed = false;
-    const updatedBlockedSites = [...blockedSites];
-
-    for (const removal of pendingRemovals) {
-        if (now >= removal.unlockTime) {
-            const index = updatedBlockedSites.indexOf(removal.site);
-            if (index > -1) {
-                updatedBlockedSites.splice(index, 1);
-                changed = true;
-            }
-        } else {
-            stillPending.push(removal);
-        }
-    }
-
-    if (changed) {
-        await chrome.storage.local.set({ blockedSites: updatedBlockedSites });
-    }
-    await chrome.storage.local.set({ pendingRemovals: stillPending });
-}
 
 // Navigation listener - block sites and searches
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
@@ -241,11 +190,8 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     }
 });
 
-// Set up alarm for processing pending removals
-chrome.alarms.create('processPending', { periodInMinutes: 1 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'processPending') processPendingRemovals();
-});
+// No alarms needed for pending removals
+
 
 // Message Handler
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -309,19 +255,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    if (request.action === 'cancelRemoval') {
-        (async () => {
-            const { pendingRemovals = [] } = await chrome.storage.local.get('pendingRemovals');
-            const filtered = pendingRemovals.filter(item => item.site !== request.site);
-            if (filtered.length !== pendingRemovals.length) {
-                await chrome.storage.local.set({ pendingRemovals: filtered });
-                sendResponse({ success: true });
-            } else {
-                sendResponse({ success: false, error: 'not_found' });
-            }
-        })();
-        return true;
-    }
+    // cancelRemoval handler removed
+
 
     // --- INFO & STATS ---
     if (request.action === 'getStats') {
@@ -412,4 +347,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-console.log('ArcZen service worker active');
+

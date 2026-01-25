@@ -17,8 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         siteInput: document.getElementById('siteInput'),
         blockedList: document.getElementById('blockedList'),
         emptyMessage: document.getElementById('emptyMessage'),
-        pendingSection: document.getElementById('pendingSection'),
-        pendingList: document.getElementById('pendingList'),
+
 
         // Shield (AdBlock)
         shieldToggle: document.getElementById('shieldToggle'),
@@ -55,11 +54,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- DATA LOADING ---
     async function render() {
-        const { blockedSites = [], pendingRemovals = [], stats = {}, settings = {}, vpnEnabled = false } =
-            await chrome.storage.local.get(['blockedSites', 'pendingRemovals', 'stats', 'settings', 'vpnEnabled']);
+        const { blockedSites = [], stats = {}, settings = {}, vpnEnabled = false } =
+            await chrome.storage.local.get(['blockedSites', 'stats', 'settings', 'vpnEnabled']);
+
 
         // Stats
-        if (ui.streakCount) ui.streakCount.textContent = stats.cleanStreak || 0;
+        // Stats (Dynamic Streak Calculation)
+        if (ui.streakCount) {
+            if (stats.lastBlockDate) {
+                const lastBlockTime = new Date(stats.lastBlockDate).getTime();
+                const diffTime = Math.abs(Date.now() - lastBlockTime);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                ui.streakCount.textContent = diffDays;
+            } else {
+                ui.streakCount.textContent = "0";
+            }
+        }
         if (ui.todayBlocks) ui.todayBlocks.textContent = stats.todayBlocks || 0;
         if (ui.totalBlocks) ui.totalBlocks.textContent = stats.totalBlocks || 0;
 
@@ -102,8 +112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Blocked List
         renderList(blockedSites);
 
-        // Pending List
-        renderPending(pendingRemovals);
+
 
         // Shield / AdBlock Logic
         const isAdBlockOn = settings.adBlockEnabled !== false;
@@ -193,10 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function renderPending(list) {
-        // STRICT MODE: We don't support pending removals anymore.
-        if (ui.pendingSection) ui.pendingSection.style.display = 'none';
-    }
+
 
     function renderChart(hourlyData) {
         if (!ui.hourlyChart) return;
@@ -381,5 +387,67 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Init
     render();
-    setInterval(render, 5000); // Check status frequently
+    setInterval(render, 30000); // Check status every 30s
+
+    // --- NEW FEATURES ---
+
+    // 1. Block Current Tab
+    const blockCurrentBtn = document.getElementById('blockCurrentBtn');
+    if (blockCurrentBtn) {
+        blockCurrentBtn.addEventListener('click', () => {
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                if (tabs[0] && tabs[0].url) {
+                    const url = tabs[0].url;
+                    // Send addSite message
+                    const response = await chrome.runtime.sendMessage({ action: 'addSite', site: url });
+                    if (response && response.success) {
+                        ui.siteInput.value = '';
+                        render();
+                    } else if (response && response.error === 'limit_reached') {
+                        alert("FREE LIMIT REACHED.");
+                    } else if (response && response.error === 'already_exists') {
+                        alert("Already blocked.");
+                    }
+                }
+            });
+        });
+    }
+
+    // 2. Export Data
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+            const data = await chrome.storage.local.get(null);
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `arczen-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+        });
+    }
+
+    // 3. Import Data
+    const importBtn = document.getElementById('importBtn');
+    const importFile = document.getElementById('importFile');
+    if (importBtn && importFile) {
+        importBtn.addEventListener('click', () => importFile.click());
+        importFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    await chrome.storage.local.set(data);
+                    alert("Data restored successfully!");
+                    render();
+                } catch (err) {
+                    alert("Error importing data: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
 });

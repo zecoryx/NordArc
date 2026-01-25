@@ -10,9 +10,7 @@
   },
   "permissions": [
     "storage",
-    "webNavigation",
-    "alarms",
-    "proxy"
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>"

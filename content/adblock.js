@@ -24,8 +24,9 @@ async function runAdBlocker() {
             chrome.runtime.sendMessage({ action: 'adBlocked' }, (response) => {
                 if (response && response.continueBlocking) {
                     el.style.display = 'none';
-                    el.style.border = '2px solid red'; // Debug visual (optional, maybe remove for prod)
-                    console.log('ArcZen: Ad blocked');
+                    // el.style.border = '2px solid red'; // Debug removed
+                    // console.log('ArcZen: Ad blocked'); // Log removed
+
                 }
             });
         });
@@ -34,4 +35,5 @@ async function runAdBlocker() {
 
 // Run on load and scroll
 runAdBlocker();
-setInterval(runAdBlocker, 2000);
+setInterval(runAdBlocker, 5000); // Optimized to 5s
+
