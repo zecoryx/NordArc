@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArcZen</title>
+  <title>NordArc</title>
   <link rel="stylesheet" href="popup.css">
   <!-- Lucide Icons via standard SVGs (Inline for performance/security) -->
 </head>
@@ -13,7 +13,7 @@
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <div class="logo">ArcZen</div>
+      <div class="logo">NordArc</div>
       <div class="status-badge">
         POWERED BY ZECORYX
       </div>
@@ -157,11 +157,30 @@
           </div>
         </div>
 
+        <div class="card" style="margin-top: 12px;">
+          <div class="section-title" style="margin-bottom: 12px;">TOOLS</div>
+          <div class="grid-stats" style="margin-bottom: 0;">
+            <button id="blockCurrentBtn" class="mini-stat-btn" style="flex: 1; cursor: pointer; border: 1px solid #333; background: #222; border-radius: 8px; padding: 12px; color: white;">
+              <span class="label" style="font-size: 10px; opacity: 0.7;">PAGE</span>
+              <span class="value" style="font-size: 12px;">Block This</span>
+            </button>
+            <button id="exportBtn" class="mini-stat-btn" style="flex: 1; cursor: pointer; border: 1px solid #333; background: #222; border-radius: 8px; padding: 12px; color: white;">
+              <span class="label" style="font-size: 10px; opacity: 0.7;">DATA</span>
+              <span class="value" style="font-size: 12px;">Export</span>
+            </button>
+            <button id="importBtn" class="mini-stat-btn" style="flex: 1; cursor: pointer; border: 1px solid #333; background: #222; border-radius: 8px; padding: 12px; color: white;">
+              <span class="label" style="font-size: 10px; opacity: 0.7;">DATA</span>
+              <span class="value" style="font-size: 12px;">Import</span>
+            </button>
+          </div>
+          <input type="file" id="importFile" style="display: none;" accept=".json">
+        </div>
+
         <!-- Pro Code Activation -->
         <div class="card" style="margin-top: 12px;">
           <div class="section-title" style="margin-bottom: 12px;">ENTER PRO CODE</div>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="proCodeInput" placeholder="ARCZEN-PRO-XXXX"
+            <input type="text" id="proCodeInput" placeholder="NORDARC-PRO-XXXX"
               style="flex: 1; background: #222; border: 1px solid #333; padding: 10px 12px; border-radius: 8px; color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
             <button id="activateProBtn" class="add-btn" style="padding: 10px 16px;">Activate</button>
           </div>
@@ -239,7 +258,7 @@
     </div>
   </div>
 
-  <script src="popup.js"></script>
+  <script type="module" src="popup.js"></script>
 </body>
 
 </html>

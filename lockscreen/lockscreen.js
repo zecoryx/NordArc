@@ -1,96 +1,101 @@
-// ArcZen Lock Screen Logic (Opal Style)
-
-const ui = {
-    gem: document.getElementById('breathingGem'),
-    text: document.getElementById('breathingText'),
-    actionBtn: document.getElementById('actionBtn'),
-    closeBtn: document.getElementById('closeBtn'),
-    title: document.getElementById('mainTitle'),
-    status: document.getElementById('statusCapsule'),
-    quote: document.getElementById('quote')
-};
-
-let isBreathing = false;
-let phase = 'inhale'; // inhale, hold, exhale
-let cycles = 0;
-const TARGET_CYCLES = 3;
-
-// Parse URL params
-const params = new URLSearchParams(window.location.search);
-const reason = params.get('reason');
-const keyword = params.get('keyword');
-
-if (reason === 'search') {
-    ui.title.textContent = "Search Blocked";
-    ui.status.textContent = `KEYWORD: ${keyword}`;
-    ui.quote.textContent = "Your goals are more important than this search.";
-} else {
-    ui.title.textContent = "Focus Guard";
-}
-
-// Logic
-ui.closeBtn.addEventListener('click', () => {
-    window.close(); // Only works if script opened it, but good to have
-    chrome.tabs.getCurrent(tab => {
-        if (tab) chrome.tabs.remove(tab.id);
-    });
-});
-
-ui.actionBtn.addEventListener('click', () => {
-    if (!isBreathing) {
-        startBreathing();
-    } else {
-        // Unlock logic if breathing done?
-        // Actually, just redirect home or close
-        window.location.href = 'https://google.com';
-    }
-});
-
-function startBreathing() {
-    isBreathing = true;
-    ui.actionBtn.style.display = 'none'; // Hide button during exercise
-    ui.text.textContent = 'INHALE';
-    ui.gem.classList.add('inhale');
-
-    breathingLoop();
-}
-
-function breathingLoop() {
-    if (cycles >= TARGET_CYCLES) {
-        finishBreathing();
-        return;
+/**
+ * Lockscreen Controller.
+ * Manages the breathing exercise and center-focus logic.
+ */
+class LockscreenController {
+    constructor() {
+        this.ui = this.cacheElements();
+        this.isBreathing = false;
+        this.cycles = 0;
+        this.TARGET_CYCLES = 3;
     }
 
-    // Inhale (4s)
-    ui.gem.className = 'gem-container inhale';
-    ui.text.textContent = 'INHALE';
+    cacheElements() {
+        return {
+            gem: document.getElementById('breathingGem'),
+            text: document.getElementById('breathingText'),
+            actionBtn: document.getElementById('actionBtn'),
+            closeBtn: document.getElementById('closeBtn'),
+            title: document.getElementById('mainTitle'),
+            status: document.getElementById('statusCapsule'),
+            quote: document.getElementById('quote')
+        };
+    }
 
-    setTimeout(() => {
-        // Exhale (6s)
-        ui.gem.className = 'gem-container exhale';
-        ui.text.textContent = 'EXHALE';
+    init() {
+        this.setupEventListeners();
+        this.loadContext();
+    }
 
-        setTimeout(() => {
-            cycles++;
-            breathingLoop();
-        }, 6000); // Exhale duration
+    setupEventListeners() {
+        this.ui.closeBtn?.addEventListener('click', () => this.handleClose());
+        this.ui.actionBtn?.addEventListener('click', () => {
+            if (!this.isBreathing) this.startBreathing();
+            else window.location.href = 'https://google.com';
+        });
+    }
 
-    }, 4000); // Inhale duration
+    loadContext() {
+        const params = new URLSearchParams(window.location.search);
+        const blockId = params.get('id');
+        if (!blockId) return;
+
+        chrome.storage.session.get(`block_${blockId}`, (result) => {
+            const data = result[`block_${blockId}`];
+            if (data && data.reason === 'search') {
+                this.updateUIForSearch(data.keyword);
+                chrome.storage.session.remove(`block_${blockId}`);
+            }
+        });
+    }
+
+    updateUIForSearch(keyword) {
+        if (this.ui.title) this.ui.title.textContent = "Search Blocked";
+        if (this.ui.status) this.ui.status.textContent = `KEYWORD: ${keyword || 'REDACTED'}`;
+        if (this.ui.quote) this.ui.quote.textContent = "Your goals are more important than this search.";
+    }
+
+    handleClose() {
+        chrome.tabs.getCurrent(tab => {
+            if (tab) chrome.tabs.remove(tab.id);
+            else window.close();
+        });
+    }
+
+    startBreathing() {
+        this.isBreathing = true;
+        if (this.ui.actionBtn) this.ui.actionBtn.style.display = 'none';
+        this.breathingLoop();
+    }
+
+    breathingLoop() {
+        if (this.cycles >= this.TARGET_CYCLES) return this.finishBreathing();
+
+        this.animatePhase('inhale', 'INHALE', 4000, () => {
+            this.animatePhase('exhale', 'EXHALE', 6000, () => {
+                this.cycles++;
+                this.breathingLoop();
+            });
+        });
+    }
+
+    animatePhase(className, text, duration, callback) {
+        if (this.ui.gem) this.ui.gem.className = `gem-container ${className}`;
+        if (this.ui.text) this.ui.text.textContent = text;
+        setTimeout(callback, duration);
+    }
+
+    finishBreathing() {
+        if (this.ui.gem) this.ui.gem.className = 'gem-container';
+        if (this.ui.text) this.ui.text.textContent = 'READY';
+        if (this.ui.actionBtn) {
+            this.ui.actionBtn.style.display = 'block';
+            this.ui.actionBtn.textContent = 'Close Tab';
+            this.ui.actionBtn.disabled = false;
+            this.ui.actionBtn.onclick = () => this.handleClose();
+        }
+        if (this.ui.title) this.ui.title.textContent = "Well Done";
+    }
 }
 
-function finishBreathing() {
-    ui.gem.className = 'gem-container';
-    ui.text.textContent = 'READY';
-    ui.actionBtn.style.display = 'block';
-    ui.actionBtn.textContent = 'Continue to Site (Delayed)';
-    ui.actionBtn.disabled = true; // Still blocked technically
-
-    ui.title.textContent = "Well Done";
-    ui.quote.textContent = "You've centered yourself. Return to your task.";
-
-    setTimeout(() => {
-        ui.actionBtn.textContent = "Close Tab";
-        ui.actionBtn.disabled = false;
-        ui.actionBtn.onclick = () => window.close();
-    }, 1000);
-}
+new LockscreenController().init();

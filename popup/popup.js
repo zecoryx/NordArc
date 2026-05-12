@@ -1,453 +1,271 @@
-// ARCZEN POPUP CONTROLLER
+import { MESSAGE_ACTIONS, LIMITS } from '../constants.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // --- ELEMENTS ---
-    const ui = {
-        tabs: document.querySelectorAll('.tab-btn'),
-        contents: document.querySelectorAll('.tab-content'),
-
-        // Home
-        streakCount: document.getElementById('streakCount'),
-        todayBlocks: document.getElementById('todayBlocks'),
-        totalBlocks: document.getElementById('totalBlocks'),
-        maintenanceNotice: document.getElementById('maintenanceNotice'),
-
-        // Rules
-        addSiteForm: document.getElementById('addSiteForm'),
-        siteInput: document.getElementById('siteInput'),
-        blockedList: document.getElementById('blockedList'),
-        emptyMessage: document.getElementById('emptyMessage'),
-
-
-        // Shield (AdBlock)
-        shieldToggle: document.getElementById('shieldToggle'),
-        shieldStatusText: document.getElementById('shieldStatusText'),
-        adLimitBar: document.getElementById('adLimitBar'),
-        adLimitCount: document.getElementById('adLimitCount'),
-
-        // VPN
-        vpnConnectBtn: document.getElementById('vpnConnectBtn'),
-        vpnStatus: document.getElementById('vpnStatus'),
-        countrySelector: document.getElementById('countrySelector'),
-
-        // Settings / Misc
-        nextMaintenance: document.getElementById('nextMaintenance'),
-        passwordModal: document.getElementById('passwordModal'),
-        passwordInput: document.getElementById('passwordInput'),
-        cancelBtn: document.getElementById('cancelBtn'),
-        confirmBtn: document.getElementById('confirmBtn'),
-        hourlyChart: document.getElementById('hourlyChart')
-    };
-
-    let currentSiteToRemove = null;
-
-    // --- TAB LOGIC ---
-    ui.tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            ui.tabs.forEach(t => t.classList.remove('active'));
-            ui.contents.forEach(c => c.classList.remove('active'));
-            tab.classList.add('active');
-            const targetId = tab.dataset.tab;
-            document.getElementById(targetId).classList.add('active');
-        });
-    });
-
-    // --- DATA LOADING ---
-    async function render() {
-        const { blockedSites = [], stats = {}, settings = {}, vpnEnabled = false } =
-            await chrome.storage.local.get(['blockedSites', 'stats', 'settings', 'vpnEnabled']);
-
-
-        // Stats
-        // Stats (Dynamic Streak Calculation)
-        if (ui.streakCount) {
-            if (stats.lastBlockDate) {
-                const lastBlockTime = new Date(stats.lastBlockDate).getTime();
-                const diffTime = Math.abs(Date.now() - lastBlockTime);
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                ui.streakCount.textContent = diffDays;
-            } else {
-                ui.streakCount.textContent = "0";
-            }
-        }
-        if (ui.todayBlocks) ui.todayBlocks.textContent = stats.todayBlocks || 0;
-        if (ui.totalBlocks) ui.totalBlocks.textContent = stats.totalBlocks || 0;
-
-        // Maintenance
-        const maintenanceInfo = await new Promise(resolve => {
-            chrome.runtime.sendMessage({ action: 'getMaintenanceInfo' }, resolve);
-        });
-
-        if (ui.maintenanceNotice) {
-            if (maintenanceInfo.isActive) {
-                ui.maintenanceNotice.style.display = 'flex';
-                ui.maintenanceNotice.innerHTML = `<span>✨</span> ${maintenanceInfo.message}`;
-            } else {
-                ui.maintenanceNotice.style.display = 'none';
-            }
-        }
-
-        if (ui.nextMaintenance) {
-            ui.nextMaintenance.textContent = maintenanceInfo.isActive ?
-                'ACTIVE NOW (INSTANT)' :
-                'LOCKED (20 MIN DELAY)';
-        }
-
-        // START NEW MAINTENANCE UI LOGIC
-        const nextMaintEl = document.getElementById('nextMaintenanceDate');
-        const statusEl = document.getElementById('maintenanceStatus');
-
-        if (nextMaintEl) {
-            const now = new Date();
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            nextMaintEl.textContent = `${lastDay.toLocaleDateString()} 23:50`;
-        }
-
-        if (statusEl) {
-            statusEl.textContent = maintenanceInfo.isActive ? 'UNLOCKED 🔓' : 'LOCKED 🔒';
-            statusEl.style.color = maintenanceInfo.isActive ? '#10b981' : '#9ca3af';
-        }
-        // END NEW LOGIC
-
-        // Blocked List
-        renderList(blockedSites);
-
-
-
-        // Shield / AdBlock Logic
-        const isAdBlockOn = settings.adBlockEnabled !== false;
-        const { isPro = false } = await chrome.storage.local.get('isPro');
-
-        if (ui.shieldToggle) {
-            ui.shieldToggle.classList.toggle('active', isAdBlockOn);
-            ui.shieldStatusText.textContent = isAdBlockOn ? "PROTECTION ON" : "PROTECTION OFF";
-            ui.shieldStatusText.classList.toggle('active', isAdBlockOn);
-
-            // Limit Tracker (Pro = unlimited)
-            const adCount = stats.adsBlockedCount || 0;
-
-            if (isPro) {
-                // Pro users - show unlimited
-                if (ui.adLimitBar) ui.adLimitBar.style.width = '100%';
-                if (ui.adLimitCount) ui.adLimitCount.textContent = `${adCount} (PRO - UNLIMITED)`;
-                ui.adLimitBar?.style.setProperty('background', '#10b981');
-            } else {
-                // Free users - show limit
-                const limit = 200;
-                const pct = Math.min(100, (adCount / limit) * 100);
-
-                if (ui.adLimitBar) ui.adLimitBar.style.width = `${pct}%`;
-                if (ui.adLimitCount) ui.adLimitCount.textContent = `${adCount} / ${limit}`;
-
-                if (adCount >= limit) {
-                    ui.shieldToggle.classList.remove('active');
-                    ui.shieldStatusText.textContent = "LIMIT REACHED (UPGRADE)";
-                    ui.shieldStatusText.style.color = "#ef4444";
-                }
-            }
-        }
-
-        // VPN Status (Visual Only - Coming Soon)
-        if (ui.vpnConnectBtn) {
-            const isVpnOn = !!vpnEnabled;
-            ui.vpnConnectBtn.classList.toggle('active', isVpnOn);
-            ui.vpnStatus.textContent = isVpnOn ? "CONNECTED" : "DISCONNECTED";
-            ui.vpnStatus.classList.toggle('active', isVpnOn);
-            const vpnText = ui.vpnConnectBtn.querySelector('.vpn-text');
-            if (vpnText) vpnText.textContent = isVpnOn ? "STOP" : "CONNECT";
-
-            // Always show Coming Soon for VPN
-            const vpnMessage = document.getElementById('vpnMessage');
-            if (vpnMessage) {
-                vpnMessage.textContent = "Coming Soon...";
-                vpnMessage.style.color = "#9ca3af";
-            }
-        }
-
-        // Chart
-        renderChart(stats.hourlyBlocks || {});
+/**
+ * Controller for the Popup UI.
+ * Handles user interactions and updates the view.
+ */
+class PopupController {
+    constructor() {
+        this.ui = this.cacheElements();
+        this.currentSiteToRemove = null;
+        this.lastDataHash = null;
     }
 
-    function renderList(sites) {
-        if (!ui.blockedList) return;
-        ui.blockedList.innerHTML = '';
-        if (sites.length === 0) {
-            ui.emptyMessage.style.display = 'block';
-        } else {
-            ui.emptyMessage.style.display = 'none';
-            sites.forEach(site => {
-                const li = document.createElement('div');
-                li.className = 'blocked-item';
-                li.innerHTML = `
-          <span class="name">${site}</span>
-          <button class="remove-btn" data-site="${site}" title="Remove">×</button>
-        `;
-                ui.blockedList.appendChild(li);
-            });
+    cacheElements() {
+        return {
+            tabs: document.querySelectorAll('.tab-btn'),
+            contents: document.querySelectorAll('.tab-content'),
+            streakCount: document.getElementById('streakCount'),
+            todayBlocks: document.getElementById('todayBlocks'),
+            totalBlocks: document.getElementById('totalBlocks'),
+            maintenanceNotice: document.getElementById('maintenanceNotice'),
+            addSiteForm: document.getElementById('addSiteForm'),
+            siteInput: document.getElementById('siteInput'),
+            blockedList: document.getElementById('blockedList'),
+            emptyMessage: document.getElementById('emptyMessage'),
+            shieldToggle: document.getElementById('shieldToggle'),
+            shieldStatusText: document.getElementById('shieldStatusText'),
+            adLimitBar: document.getElementById('adLimitBar'),
+            adLimitCount: document.getElementById('adLimitCount'),
+            nextMaintenance: document.getElementById('nextMaintenance'),
+            passwordModal: document.getElementById('passwordModal'),
+            passwordInput: document.getElementById('passwordInput'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            confirmBtn: document.getElementById('confirmBtn'),
+            hourlyChart: document.getElementById('hourlyChart'),
+            nextMaintEl: document.getElementById('nextMaintenanceDate'),
+            statusEl: document.getElementById('maintenanceStatus'),
+            proCodeInput: document.getElementById('proCodeInput'),
+            activateProBtn: document.getElementById('activateProBtn'),
+            proStatus: document.getElementById('proStatus'),
+            blockCurrentBtn: document.getElementById('blockCurrentBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            importBtn: document.getElementById('importBtn'),
+            importFile: document.getElementById('importFile')
+        };
+    }
 
-            // Attach handlers for reveal on click
-            document.querySelectorAll('.blocked-item .name').forEach(nameEl => {
-                nameEl.addEventListener('click', () => {
-                    nameEl.classList.toggle('revealed');
-                });
-            });
+    async init() {
+        this.setupEventListeners();
+        await this.render();
+        setInterval(() => this.render(), LIMITS.UI_REFRESH_MS);
+    }
 
-            // Attach handlers for remove
-            document.querySelectorAll('.remove-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    currentSiteToRemove = btn.dataset.site;
-                    showModal();
-                });
+    setupEventListeners() {
+        // Tab switching
+        this.ui.tabs.forEach(tab => {
+            tab.onclick = () => {
+                const target = tab.dataset.tab;
+                this.ui.tabs.forEach(t => t.classList.toggle('active', t === tab));
+                this.ui.contents.forEach(c => c.classList.toggle('active', c.id === target));
+            };
+        });
+
+        // Site management
+        this.ui.addSiteForm?.addEventListener('submit', (e) => this.handleAddSite(e));
+        this.ui.shieldToggle?.addEventListener('click', () => this.toggleAdBlock());
+        this.ui.confirmBtn?.addEventListener('click', () => this.handleRemoveSite());
+        this.ui.cancelBtn?.addEventListener('click', () => this.hideModal());
+
+        // Pro features
+        this.ui.activateProBtn?.addEventListener('click', () => this.handleActivatePro());
+        this.ui.blockCurrentBtn?.addEventListener('click', () => this.handleBlockCurrent());
+
+        // Data tools
+        this.ui.exportBtn?.addEventListener('click', () => this.handleExport());
+        this.ui.importBtn?.addEventListener('click', () => this.ui.importFile.click());
+        this.ui.importFile?.addEventListener('change', (e) => this.handleImport(e));
+    }
+
+    async render(force = false) {
+        try {
+            const [storage, maint] = await Promise.all([
+                chrome.storage.local.get(null),
+                chrome.runtime.sendMessage({ action: MESSAGE_ACTIONS.GET_MAINTENANCE })
+            ]);
+
+            const hash = JSON.stringify({ storage, maint });
+            if (!force && this.lastDataHash === hash) return;
+            this.lastDataHash = hash;
+
+            requestAnimationFrame(() => {
+                this.updateStats(storage.stats || {});
+                this.updateMaintenance(maint);
+                this.updateShield(storage.settings || {}, storage.stats || {}, storage.isPro);
+                this.updateProStatus(storage.isPro);
+                this.renderList(storage.blockedSites || []);
+                this.renderChart(storage.stats?.hourlyBlocks || {});
             });
+        } catch (e) {
+            console.error('Popup: Render failed', e);
         }
     }
 
+    updateStats(stats) {
+        if (this.ui.streakCount && stats.lastBlockDate) {
+            const diff = Math.floor(Math.abs(Date.now() - new Date(stats.lastBlockDate).getTime()) / 86400000);
+            this.ui.streakCount.textContent = diff;
+        }
+        if (this.ui.todayBlocks) this.ui.todayBlocks.textContent = stats.todayBlocks || 0;
+        if (this.ui.totalBlocks) this.ui.totalBlocks.textContent = stats.totalBlocks || 0;
+    }
 
+    updateMaintenance(maint) {
+        if (!maint) return;
+        if (this.ui.maintenanceNotice) {
+            this.ui.maintenanceNotice.style.display = maint.isActive ? 'flex' : 'none';
+            this.ui.maintenanceNotice.textContent = `✨ ${maint.message}`;
+        }
+        if (this.ui.nextMaintenance) this.ui.nextMaintenance.textContent = maint.isActive ? 'ACTIVE NOW' : 'LOCKED';
+        if (this.ui.statusEl) {
+            this.ui.statusEl.textContent = maint.isActive ? 'UNLOCKED 🔓' : 'LOCKED 🔒';
+            this.ui.statusEl.style.color = maint.isActive ? '#10b981' : '#9ca3af';
+        }
+        if (this.ui.nextMaintEl) {
+            const lastDay = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+            this.ui.nextMaintEl.textContent = `${lastDay.toLocaleDateString()} 23:50`;
+        }
+    }
 
-    function renderChart(hourlyData) {
-        if (!ui.hourlyChart) return;
-        ui.hourlyChart.innerHTML = '';
+    updateShield(settings, stats, isPro) {
+        const active = settings.adBlockEnabled !== false;
+        if (this.ui.shieldToggle) {
+            this.ui.shieldToggle.classList.toggle('active', active);
+            this.ui.shieldStatusText.textContent = active ? "PROTECTION ON" : "PROTECTION OFF";
+            
+            const count = stats.adsBlockedCount || 0;
+            const pct = isPro ? 100 : Math.min(100, (count / LIMITS.FREE_AD_LIMIT) * 100);
+            if (this.ui.adLimitBar) this.ui.adLimitBar.style.width = `${pct}%`;
+            if (this.ui.adLimitCount) this.ui.adLimitCount.textContent = isPro ? `${count} (PRO)` : `${count} / ${LIMITS.FREE_AD_LIMIT}`;
+        }
+    }
+
+    updateProStatus(isPro) {
+        if (isPro && this.ui.proCodeInput) {
+            this.ui.proCodeInput.value = "Code Activated ✓";
+            this.ui.proCodeInput.disabled = true;
+            this.ui.proCodeInput.style.color = "#10b981";
+            this.ui.activateProBtn.style.display = "none";
+            if (this.ui.proStatus) {
+                this.ui.proStatus.textContent = "PRO VERSION ACTIVATED";
+                this.ui.proStatus.style.color = "#10b981";
+            }
+        }
+    }
+
+    renderList(sites) {
+        if (!this.ui.blockedList) return;
+        this.ui.blockedList.innerHTML = '';
+        this.ui.emptyMessage.style.display = sites.length ? 'none' : 'block';
+
+        const fragment = document.createDocumentFragment();
+        sites.forEach(site => {
+            const item = document.createElement('div');
+            item.className = 'blocked-item';
+            
+            const span = document.createElement('span');
+            span.className = 'name';
+            span.textContent = site;
+            span.onclick = () => span.classList.toggle('revealed');
+            
+            const btn = document.createElement('button');
+            btn.className = 'remove-btn';
+            btn.textContent = '×';
+            btn.onclick = (e) => { e.stopPropagation(); this.currentSiteToRemove = site; this.showModal(); };
+
+            item.append(span, btn);
+            fragment.appendChild(item);
+        });
+        this.ui.blockedList.appendChild(fragment);
+    }
+
+    renderChart(hourlyData) {
+        if (!this.ui.hourlyChart) return;
+        this.ui.hourlyChart.innerHTML = '';
         const values = Object.values(hourlyData);
         const max = values.length ? Math.max(...values, 5) : 5;
         const currentHour = new Date().getHours();
+        const fragment = document.createDocumentFragment();
 
         for (let i = 0; i < 24; i++) {
-            const count = hourlyData[i] || 0;
-            const heightPercentage = (count / max) * 100;
-
             const bar = document.createElement('div');
-            bar.className = 'chart-bar';
-            if (i === currentHour) bar.classList.add('current');
-            bar.style.height = `${Math.max(4, heightPercentage)}%`;
-            bar.title = `${i}:00 - ${count} blocks`;
+            bar.className = 'chart-bar' + (i === currentHour ? ' current' : '');
+            bar.style.height = `${Math.max(4, ((hourlyData[i] || 0) / max) * 100)}%`;
+            fragment.appendChild(bar);
+        }
+        this.ui.hourlyChart.appendChild(fragment);
+    }
 
-            ui.hourlyChart.appendChild(bar);
+    // Handlers
+    async handleAddSite(e) {
+        e.preventDefault();
+        const site = this.ui.siteInput.value.trim();
+        if (!site) return;
+        const res = await chrome.runtime.sendMessage({ action: MESSAGE_ACTIONS.ADD_SITE, site });
+        if (res.success) { this.ui.siteInput.value = ''; this.render(true); }
+        else alert(res.error === 'limit_reached' ? "FREE LIMIT" : "Error");
+    }
+
+    async toggleAdBlock() {
+        const { settings = {} } = await chrome.storage.local.get('settings');
+        settings.adBlockEnabled = !settings.adBlockEnabled;
+        await chrome.storage.local.set({ settings });
+        this.render(true);
+    }
+
+    async handleRemoveSite() {
+        const res = await chrome.runtime.sendMessage({ 
+            action: MESSAGE_ACTIONS.REMOVE_SITE, 
+            site: this.currentSiteToRemove, 
+            password: this.ui.passwordInput.value 
+        });
+        if (res.success) { this.hideModal(); this.render(true); }
+        else { this.ui.passwordInput.classList.add('shake'); setTimeout(() => this.ui.passwordInput.classList.remove('shake'), 500); }
+    }
+
+    async handleActivatePro() {
+        const res = await chrome.runtime.sendMessage({ action: MESSAGE_ACTIONS.ACTIVATE_PRO, code: this.ui.proCodeInput.value });
+        if (res.success) this.render(true);
+        else alert("Invalid code");
+    }
+
+    async handleBlockCurrent() {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.url) {
+            const res = await chrome.runtime.sendMessage({ action: MESSAGE_ACTIONS.ADD_SITE, site: tab.url });
+            if (res.success) this.render(true);
         }
     }
 
-    // --- ACTIONS ---
-
-    // Add Site (with 7-site free limit)
-    if (ui.addSiteForm) {
-        ui.addSiteForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const site = ui.siteInput.value.trim();
-            if (!site) return;
-
-            const response = await chrome.runtime.sendMessage({ action: 'addSite', site });
-
-            if (response && response.success) {
-                ui.siteInput.value = '';
-                render();
-            } else if (response && response.error === 'limit_reached') {
-                alert("FREE LIMIT: Maximum 7 sites. Enter Pro code in Settings to unlock.");
-            } else if (response && response.error === 'already_exists') {
-                alert("This site is already blocked.");
-            }
-        });
-    }
-
-    // Shield Toggle (AdBlock)
-    if (ui.shieldToggle) {
-        ui.shieldToggle.addEventListener('click', async () => {
-            const { stats = {} } = await chrome.storage.local.get('stats');
-
-            // Check count
-            if ((stats.adsBlockedCount || 0) >= 200) {
-                alert("Free Plan Limit Reached (200 Ads).");
-                // Optional: Redirect to upgrade
-                return;
-            }
-
-            const { settings = {} } = await chrome.storage.local.get('settings');
-            settings.adBlockEnabled = !settings.adBlockEnabled;
-            await chrome.storage.local.set({ settings });
-            render();
-        });
-    }
-
-    // REAL VPN Connect (with trial check)
-    if (ui.vpnConnectBtn) {
-        ui.vpnConnectBtn.addEventListener('click', async () => {
-            const response = await chrome.runtime.sendMessage({ action: 'toggleVPN' });
-            if (response && response.success) {
-                render();
-            } else if (response && response.error === 'trial_expired') {
-                alert(response.message || "Free trial expired. Enter Pro code in Settings.");
-            }
-        });
-    }
-
-    // Country Selector (Visual only)
-    if (ui.countrySelector) {
-        ui.countrySelector.addEventListener('click', () => {
-            alert("Proxy configuration is set in background.js");
-        });
-    }
-
-    // Modal Logic
-    function showModal() {
-        ui.passwordModal.classList.add('active');
-        ui.passwordInput.focus();
-        ui.passwordInput.value = '';
-    }
-    function hideModal() {
-        ui.passwordModal.classList.remove('active');
-        ui.passwordInput.value = '';
-    }
-
-    if (ui.cancelBtn) ui.cancelBtn.addEventListener('click', hideModal);
-
-    if (ui.confirmBtn) {
-        ui.confirmBtn.addEventListener('click', async () => {
-            const pwd = ui.passwordInput.value;
-            const response = await chrome.runtime.sendMessage({
-                action: 'removeSite',
-                site: currentSiteToRemove,
-                password: pwd
-            });
-
-            if (response.success) {
-                hideModal();
-                if (response.immediate) {
-                    // Success (Reload/Repaint)
-                }
-                render();
-            } else {
-                if (response.error === 'locked_until_maintenance') {
-                    // Strict Lock Alert
-                    alert(response.message || "LOCKED: Removal only allowed at end of month.");
-                    hideModal();
-                } else {
-                    // Password Error
-                    ui.passwordInput.style.borderColor = '#ef4444';
-                    ui.passwordInput.classList.add('shake');
-                    setTimeout(() => {
-                        ui.passwordInput.style.borderColor = '#333';
-                        ui.passwordInput.classList.remove('shake');
-                    }, 500);
-                }
-            }
-        });
-    }
-
-    // Enter to confirm in modal
-    if (ui.passwordInput) {
-        ui.passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') ui.confirmBtn.click();
-        });
-    }
-
-    // --- PRO CODE ACTIVATION ---
-    const proCodeInput = document.getElementById('proCodeInput');
-    const activateProBtn = document.getElementById('activateProBtn');
-    const proStatus = document.getElementById('proStatus');
-
-    // Check if already Pro and update UI
-    (async () => {
-        const { isPro = false } = await chrome.storage.local.get('isPro');
-        if (isPro && proCodeInput && activateProBtn) {
-            proCodeInput.value = "Code ishlatgansiz ✓";
-            proCodeInput.disabled = true;
-            proCodeInput.style.color = "#10b981";
-            proCodeInput.style.textAlign = "center";
-            activateProBtn.style.display = "none";
-            if (proStatus) {
-                proStatus.textContent = "PRO VERSION ACTIVATED";
-                proStatus.style.color = "#10b981";
-            }
-        }
-    })();
-
-    if (activateProBtn) {
-        activateProBtn.addEventListener('click', async () => {
-            const code = proCodeInput ? proCodeInput.value : '';
-            const response = await chrome.runtime.sendMessage({ action: 'activateProCode', code });
-
-            if (proStatus) {
-                if (response && response.success) {
-                    proStatus.textContent = response.message;
-                    proStatus.style.color = '#10b981';
-                    // Update input to show activated state
-                    if (proCodeInput) {
-                        proCodeInput.value = "Code ishlatgansiz ✓";
-                        proCodeInput.disabled = true;
-                        proCodeInput.style.color = "#10b981";
-                        proCodeInput.style.textAlign = "center";
-                    }
-                    activateProBtn.style.display = "none";
-                    render();
-                } else {
-                    proStatus.textContent = response.message || 'Invalid code.';
-                    proStatus.style.color = '#ef4444';
-                }
-            }
-        });
-    }
-
-    // Init
-    render();
-    setInterval(render, 30000); // Check status every 30s
-
-    // --- NEW FEATURES ---
-
-    // 1. Block Current Tab
-    const blockCurrentBtn = document.getElementById('blockCurrentBtn');
-    if (blockCurrentBtn) {
-        blockCurrentBtn.addEventListener('click', () => {
-            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-                if (tabs[0] && tabs[0].url) {
-                    const url = tabs[0].url;
-                    // Send addSite message
-                    const response = await chrome.runtime.sendMessage({ action: 'addSite', site: url });
-                    if (response && response.success) {
-                        ui.siteInput.value = '';
-                        render();
-                    } else if (response && response.error === 'limit_reached') {
-                        alert("FREE LIMIT REACHED.");
-                    } else if (response && response.error === 'already_exists') {
-                        alert("Already blocked.");
-                    }
-                }
-            });
-        });
-    }
-
-    // 2. Export Data
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', async () => {
-            const data = await chrome.storage.local.get(null);
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    handleExport() {
+        chrome.storage.local.get(null, data => {
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `arczen-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = 'nordarc-backup.json';
             a.click();
         });
     }
 
-    // 3. Import Data
-    const importBtn = document.getElementById('importBtn');
-    const importFile = document.getElementById('importFile');
-    if (importBtn && importFile) {
-        importBtn.addEventListener('click', () => importFile.click());
-        importFile.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-                try {
-                    const data = JSON.parse(ev.target.result);
+    handleImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (data.blockedSites && data.stats) {
                     await chrome.storage.local.set(data);
-                    alert("Data restored successfully!");
-                    render();
-                } catch (err) {
-                    alert("Error importing data: " + err.message);
+                    this.render(true);
                 }
-            };
-            reader.readAsText(file);
-        });
+            } catch (err) { alert("Invalid file"); }
+        };
+        reader.readAsText(file);
     }
 
-});
+    showModal() { this.ui.passwordModal.classList.add('active'); this.ui.passwordInput.focus(); }
+    hideModal() { this.ui.passwordModal.classList.remove('active'); this.ui.passwordInput.value = ''; }
+}
+
+new PopupController().init();

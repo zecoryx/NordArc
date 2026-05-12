@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ArcZen",
+  "name": "NordArc",
   "version": "1.0.0",
   "description": "Focus & Productivity - Block distracting sites with Commitment Lock",
   "icons": {
@@ -10,13 +10,15 @@
   },
   "permissions": [
     "storage",
-    "webNavigation"
+    "webNavigation",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup/popup.html",
